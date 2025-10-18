@@ -10,7 +10,8 @@ public class Game
 
     public required string GameCode { get; set; }
 
-    public Guid CurrentRoundArtId { get; set; }
-
+    // public Guid CurrentRoundArtId { get; set; }
+    public Art? CurrentRoundArt { get; set; }
+    
     public List<Art> Arts { get; set; } = [];
 }
