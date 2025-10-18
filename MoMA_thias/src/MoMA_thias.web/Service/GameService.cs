@@ -25,6 +25,8 @@ public interface IGameService
     Task<Guid> GetGameIdFromCodeAsync(string gameCode);
     
     string GenerateGameCode();
+    
+    Task<Art?> GetCurrentArtAsync(Guid gameId);
 }
 
 public class GameService : IGameService
@@ -112,6 +114,14 @@ public class GameService : IGameService
         }
         
         return new string(code);
+    }
+
+    public Task<Art?> GetCurrentArtAsync(Guid gameId)
+    {
+        return _db.Games
+            .Where(g => g.Id == gameId)
+            .Select(g => g.Arts.FirstOrDefault(a => a.Id == g.CurrentRoundArtId))
+            .FirstOrDefaultAsync();
     }
 }
 
