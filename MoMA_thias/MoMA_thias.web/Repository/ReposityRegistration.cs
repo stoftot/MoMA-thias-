@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MoMA_thias.web.Data;
 
 namespace MoMA_thias.web.Repository
 {
