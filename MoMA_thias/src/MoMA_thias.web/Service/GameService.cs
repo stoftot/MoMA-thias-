@@ -95,7 +95,7 @@ public class GameService : IGameService
     public Task<Guid> GetGameIdFromCodeAsync(string gameCode)
     {
         return _db.Games
-            .Where(g => g.GameCode.Equals(gameCode.Trim(), StringComparison.InvariantCultureIgnoreCase))
+            .Where(g => g.GameCode == gameCode.Trim().ToUpperInvariant())
             .Select(g => g.Id)
             .FirstOrDefaultAsync();
     }
