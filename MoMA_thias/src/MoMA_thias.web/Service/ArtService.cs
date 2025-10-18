@@ -6,7 +6,7 @@ namespace MoMA_thias.web.Service;
 
 public interface IArtService
 {
-    Task<Art> CreateArtAsync(string name, double price);
+    Task<Art> CreateArtAsync(Guid gameId, string name, double price);
     Task<Art> UpdateArtAsync(Guid id, string name, double price);
     Task<Art> DeleteArtAsync(Guid id);
 }
@@ -16,17 +16,17 @@ public class ArtService : IArtService
     private readonly AppDbContext _db;
     public ArtService(AppDbContext db) => _db = db;
 
-    public async Task<Art> CreateArtAsync(string name, double price)
+    public async Task<Art> CreateArtAsync(Guid gameId, string name, double price)
     {
-        var a = new Art { Name = name, Price = price };
+        var a = new Art { GameId = gameId, Name = name, Price = price };
         _db.Arts.Add(a);
         await _db.SaveChangesAsync();
         return a;
     }
 
-    public async Task<Art> UpdateArtAsync(Guid gameId, Guid artId, string name, double price)
+    public async Task<Art> UpdateArtAsync(Guid artId, string name, double price)
     {
-        var a = await _db.Arts.FirstAsync(x => x.Id == artId && x.GameId == gameId);
+        var a = await _db.Arts.FirstAsync(x => x.Id == artId);
         a.Name = name; a.Price = price;
         await _db.SaveChangesAsync();
         return a;
@@ -38,10 +38,5 @@ public class ArtService : IArtService
         _db.Arts.Remove(a);
         await _db.SaveChangesAsync();
         return a;
-    }
-
-    public Task<Art> UpdateArtAsync(Guid id, string name, double price)
-    {
-        throw new NotImplementedException();
     }
 }

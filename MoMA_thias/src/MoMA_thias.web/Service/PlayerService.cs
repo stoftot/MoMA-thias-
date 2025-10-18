@@ -10,7 +10,6 @@ interface IPlayerService
     Task<Player> DeletePlayerAsync(Guid id);
     Task<Player> GetPlayerAsync(Guid id);
     Task<List<Player>> GetAllPlayers();
-
 }
 
 public class PlayerService : IPlayerService
