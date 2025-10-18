@@ -17,7 +17,9 @@ namespace MoMA_thias.web.Repository
             var dbPath = Path.Combine(dataDir, "MomaThias.db");
 
             services.AddDbContext<AppDbContext>(opt =>
-                opt.UseSqlite($"Data Source={dbPath}"));
+                opt.UseSqlite($"Data Source={dbPath}")
+                    .EnableDetailedErrors()
+                    .EnableSensitiveDataLogging());
 
 
         }
