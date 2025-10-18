@@ -1,0 +1,63 @@
+﻿@page "/control"
+@inherits ControlGameBase
+@rendermode InteractiveServer
+
+<div class="container py-4">
+    <h2 class="mb-3">Control a Game</h2>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <label class="form-label">Game code</label>
+            <input class="form-control" @bind="Code" />
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <button class="btn btn-primary me-2" @onclick="Load">Load</button>
+            <button class="btn btn-outline-secondary" @onclick="Clear">Clear</button>
+        </div>
+    </div>
+
+    @if (Error is not null)
+    {
+        <div class="alert alert-danger">@Error</div>
+    }
+
+
+    
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Leaderboard (refresh page to update)</h5>
+            @{
+                if (Leaderboard.Any())
+                {
+                    <div class="text-muted">No players yet.</div>
+                }
+                else
+                {
+                    <table class="table table-striped align-middle">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Player</th>
+                            <th>Total Error</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @{
+                            var rank = 1;
+                            foreach (var row in Leaderboard)
+                            {
+                                <tr>
+                                    <td>@rank</td>
+                                    <td>@row.PlayerName</td>
+                                    <td>@row.BidAmount</td>
+                                </tr>
+                                rank++;
+                            }
+                        } 
+                        </tbody>
+                    </table>
+                }
+            }
+        </div>
+    </div>
+</div>
