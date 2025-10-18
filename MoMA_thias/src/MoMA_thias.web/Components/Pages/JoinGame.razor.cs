@@ -8,40 +8,39 @@ public class JoinGameBase : ComponentBase
 {
     [Inject] private IGameService GameService { get; set; } = default!;
     
+    [Inject] private IArtService ArtService { get; set; } = default!;
+    
     private Game? Game { get; set; }
+    protected Art? CurrentArt { get; set; }
     
     protected string Code { get; set; } = string.Empty;
     protected string DisplayName { get; set; } = string.Empty;
-
-    protected bool Started { get; set; }
-    protected bool Finished { get; set; }
     protected string? StartError { get; set; }
     protected string? ValidationError { get; set; }
 
-    protected decimal[] Guesses { get; } = new decimal[10];
-    protected int Index { get; set; }
+    private decimal Guess { get; set; } = 0;
+    
+    protected bool BidSubmitted => GameService.HavePlacedBidAsync(DisplayName, Game.Id, Game.CurrentRoundArtId.Value);
 
+    protected bool Started { get; set; }
+    
     protected string CurrentValueString
     {
-        get => Guesses[Index] == 0 ? string.Empty : Guesses[Index].ToString("0.##");
+        get => Guess == 0 ? string.Empty : Guess.ToString("0.##");
         set
         {
             ValidationError = null;
             if (string.IsNullOrWhiteSpace(value))
             {
-                Guesses[Index] = 0;
+                Guess = 0;
                 return;
             }
             if (decimal.TryParse(value, out var parsed) && parsed >= 0)
-                Guesses[Index] = parsed;
+                Guess = parsed;
             else
                 ValidationError = "Please enter a valid non-negative number.";
         }
     }
-
-    protected int CurrentIndexDisplay => Index + 1;
-    protected bool IsFirst => Index == 0;
-    protected bool IsLast => Index == 9;
 
     protected async void Start()
     {
@@ -52,42 +51,39 @@ public class JoinGameBase : ComponentBase
             StartError = "Please enter a game code and display name.";
             return;
         }
-
+        
         Game = await GameService.GetGameFromGameCodeAsync(Code);
         if (Game is null)
         {
             StartError = "Game not found or not ready yet.";
             return;
         }
-
-        // In a more advanced build you might lock names, etc.
+        
+        if (await GameService.IsNameTakenAsync(DisplayName, Game.Id))
+        {
+            StartError = "Display name is already taken in this game.";
+            
+            return;
+        }
+        
+        if (Game.CurrentRoundArtId is not null)
+            CurrentArt = await ArtService.GetArtAsync(Game.CurrentRoundArtId.Value);
+        
         Started = true;
+        StateHasChanged();
     }
 
-    protected void Prev()
+    protected async Task SubmitBid()
     {
-        if (Index > 0) Index--;
+        await GameService.PlaceBidAsync(DisplayName, Game.Id, Game.CurrentRoundArtId.Value, (double)Guess);
+        Guess = 0;
+        StateHasChanged();
     }
 
-    protected void Next()
+    protected async Task Refresh()
     {
-        if (Guesses[Index] <= 0)
-        {
-            ValidationError = "Guess must be greater than 0.";
-            return;
-        }
-        if (Index < 9) Index++;
-    }
-
-    protected void Finish()
-    {
-        if (Guesses[Index] <= 0)
-        {
-            ValidationError = "Guess must be greater than 0.";
-            return;
-        }
-
-        // Save guess
-        Finished = true;
+        Game = await GameService.GetGameFromIdAsync(Game.Id);
+        CurrentArt = await ArtService.GetArtAsync(Game.CurrentRoundArtId.Value);
+        StateHasChanged();
     }
 }

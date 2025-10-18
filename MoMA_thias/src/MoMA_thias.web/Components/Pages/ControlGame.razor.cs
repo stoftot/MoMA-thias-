@@ -59,12 +59,12 @@ public class ControlGameBase : ComponentBase
         if (Game is null) return;
     }
 
-    protected void OnSelectArt(Guid artId)
+    protected async void OnSelectArt(Guid artId)
     {
         if (Game is null) return;
         
         SelectedArtId = artId;
-        GameService.UpdateGameAsync(Game);
+        await GameService.UpdateGameAsync(Game);
         
         StateHasChanged();
     }

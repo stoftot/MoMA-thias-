@@ -1,4 +1,5 @@
 ﻿@page "/join"
+@using MoMA_thias.web.Model
 @inherits JoinGameBase
 @rendermode InteractiveServer
 
@@ -26,11 +27,18 @@
             <a class="btn btn-outline-secondary ms-2" href="/">Cancel</a>
         </div>
     }
-    else if (!Finished)
+    else if (CurrentArt is null)
+    {
+        <div class="alert alert-info">
+            <strong>Please wait for the game master to select a new art work</strong> 🎉
+        </div>
+        <button class="btn btn-outline-secondary" @onclick="Refresh">Refresh</button>
+    }
+    else if (!BidSubmitted)
     {
         <div class="mb-3">
-            <label class="form-label">Item @CurrentIndexDisplay of 10 — your guess</label>
-            <input class="form-control" type="number" step="0.01" min="0"
+            <label class="form-label">Item @CurrentArt.Name — your guess</label>
+            <input class="form-control" type="number" step="1" min="0"
                    @bind="CurrentValueString" @bind:event="oninput" />
             @if (ValidationError is not null)
             {
@@ -38,22 +46,15 @@
             }
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-secondary" @onclick="Prev" disabled="@IsFirst">Back</button>
-            @if (!IsLast)
-            {
-                <button class="btn btn-primary" @onclick="Next">Next</button>
-            }
-            else
-            {
-                <button class="btn btn-success" @onclick="Finish">Finish</button>
-            }
+            <button class="btn btn-primary" @onclick="SubmitBid">Submit bid</button>
         </div>
     }
     else
     {
         <div class="alert alert-info">
-            <strong>Thank you for playing</strong> 🎉
+            <strong>Thanks for the bid, please wait for the game master to switch to a new art work</strong> 🎉
         </div>
         <a class="btn btn-outline-dark" href="/">Home</a>
+        <button class="btn btn-outline-secondary" @onclick="Refresh">Refresh</button>
     }
 </div>

@@ -9,6 +9,7 @@ public interface IArtService
     Task<Art> CreateArtAsync(Guid gameId, string name, double price);
     Task<Art> UpdateArtAsync(Guid id, string name, double price);
     Task<Art> DeleteArtAsync(Guid id);
+    Task<Art> GetArtAsync(Guid id);
 }
 
 public class ArtService : IArtService
@@ -37,6 +38,12 @@ public class ArtService : IArtService
         var a = await _db.Arts.FindAsync(id) ?? throw new KeyNotFoundException("Art not found");
         _db.Arts.Remove(a);
         await _db.SaveChangesAsync();
+        return a;
+    }
+    
+    public async Task<Art> GetArtAsync(Guid id)
+    {
+        var a = await _db.Arts.FindAsync(id) ?? throw new KeyNotFoundException("Art not found");
         return a;
     }
 }

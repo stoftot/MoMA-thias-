@@ -16,8 +16,12 @@ public interface IGameService
     
     Task ResetGameAsync(Guid gameId);
 
-    Task<Bid> PlaceBidAsync(Guid gameId, Guid artId, Guid playerId, double amount);
-
+    Task<Bid> PlaceBidAsync(string playerName, Guid gameId, Guid artId, double amount);
+    
+    bool HavePlacedBidAsync(string playerName, Guid gameId, Guid artId);
+    
+    Task<bool> IsNameTakenAsync(string playerName, Guid gameId);
+    
     Task<IEnumerable<RankedBid>> GetRankedPlayerBidsByGame(Guid gameId);
 
     Task<IEnumerable<RankedBid>> GetRankedPlayerBidsByArt(Guid gameId, Guid artId);
@@ -42,12 +46,22 @@ public class GameService : IGameService
         await _db.SaveChangesAsync();
     }
 
-    public async Task<Bid> PlaceBidAsync(Guid playerId, Guid gameId, Guid artId, double amount)
+    public async Task<Bid> PlaceBidAsync(string playerName, Guid gameId, Guid artId, double amount)
     {
-        var bid = new Bid { PlayerId = playerId, GameId = gameId, ArtId = artId, Amount = amount };
+        var bid = new Bid { PlayerName = playerName, GameId = gameId, ArtId = artId, Amount = amount };
         _db.Bids.Add(bid);
         await _db.SaveChangesAsync();
         return bid;
+    }
+    
+    public bool HavePlacedBidAsync(string playerName, Guid gameId, Guid artId)
+    {
+        return _db.Bids.Any(b => b.PlayerName == playerName && b.GameId == gameId && b.ArtId == artId);
+    }
+
+    public Task<bool> IsNameTakenAsync(string playerName, Guid gameId)
+    {
+        return _db.Bids.AnyAsync(b => b.PlayerName == playerName && b.GameId == gameId); 
     }
 
     public async Task<IEnumerable<RankedBid>> GetRankedPlayerBidsByGame(Guid gameId)
@@ -62,11 +76,11 @@ public class GameService : IGameService
             ? await _db.Bids.Where(b => b.GameId == gameId).ToListAsync()
             : await _db.Bids.Where(b => b.GameId == gameId && b.ArtId == artId).ToListAsync();
 
-        var playerIds = bids.Select(b => b.PlayerId).Distinct().ToList();
+        var playerNames = bids.Select(b => b.PlayerName).Distinct().ToList();
         var artIds = bids.Select(b => b.ArtId).Distinct().ToList();
 
         var players = await _db.Players
-            .Where(p => playerIds.Contains(p.Id))
+            .Where(p => playerNames.Contains(p.Name))
             .ToDictionaryAsync(p => p.Id, p => p.Name);
 
         var arts = await _db.Arts
@@ -75,7 +89,7 @@ public class GameService : IGameService
 
         return bids
             .Select(b => new RankedBid(
-                players[b.PlayerId],
+                b.PlayerName,
                 arts[b.ArtId].Name,
                 b.Amount,
                 Math.Abs(b.Amount - arts[b.ArtId].Price)))
@@ -93,6 +107,7 @@ public class GameService : IGameService
     
     public Task<Game?> GetGameFromGameCodeAsync(string gameCode)
     {
+        _db.Entry(_db.Games).Reload();
         return _db.Games
             .Where(g => g.GameCode == gameCode.Trim().ToUpperInvariant())
             .Include(g => g.Arts)
@@ -101,6 +116,7 @@ public class GameService : IGameService
     
     public Task<Game?> GetGameFromIdAsync(Guid gameId)
     {
+        _db.Entry(_db.Games).Reload();
         return _db.Games
             .Where(g => g.Id == gameId)
             .Include(g => g.Arts)
