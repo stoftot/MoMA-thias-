@@ -12,7 +12,7 @@ public record RankedBid(string PlayerName, string ArtName, double BidAmount, dou
 
 public interface IGameService
 {
-    Task<Game> CreateGameAsync(string title, string adminPassword, string gameCode);
+    Task<Game> CreateGameAsync(string title, string adminPassword);
     
     Task ResetGameAsync(Guid gameId);
 
@@ -22,11 +22,8 @@ public interface IGameService
 
     Task<IEnumerable<RankedBid>> GetRankedPlayerBidsByArt(Guid gameId, Guid artId);
 
-    Task<Guid> GetGameIdFromCodeAsync(string gameCode);
-    
-    string GenerateGameCode();
-    
-    Task<Art?> GetCurrentArtAsync(Guid gameId);
+    Task<Game?> GetGameFromGameCode(string gameCode);
+    Task<Game?> GetGameFromIdAsync(Guid gameId);
 }
 
 public class GameService : IGameService
@@ -84,23 +81,29 @@ public class GameService : IGameService
             .ToList();
     }
 
-    public Task<Game> CreateGameAsync(string title, string adminPassword, string gameCode)
+    public Task<Game> CreateGameAsync(string title, string adminPassword)
     {
-        var game = new Game { Id = Guid.NewGuid(), Title = title, AdminPassword = adminPassword, GameCode = gameCode };
+        var game = new Game { Id = Guid.NewGuid(), Title = title, AdminPassword = adminPassword, GameCode = GenerateGameCode() };
         _db.Games.Add(game);
         _db.SaveChangesAsync();
         return Task.FromResult(game);
     }
     
-    public Task<Guid> GetGameIdFromCodeAsync(string gameCode)
+    public Task<Game?> GetGameFromGameCode(string gameCode)
     {
         return _db.Games
             .Where(g => g.GameCode == gameCode.Trim().ToUpperInvariant())
-            .Select(g => g.Id)
+            .FirstOrDefaultAsync();
+    }
+    
+    public Task<Game?> GetGameFromIdAsync(Guid gameId)
+    {
+        return _db.Games
+            .Where(g => g.Id == gameId)
             .FirstOrDefaultAsync();
     }
 
-    public string GenerateGameCode()
+    private string GenerateGameCode()
     {
         const string chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
         Span<char> code = stackalloc char[6];
@@ -114,14 +117,6 @@ public class GameService : IGameService
         }
         
         return new string(code);
-    }
-
-    public Task<Art?> GetCurrentArtAsync(Guid gameId)
-    {
-        return _db.Games
-            .Where(g => g.Id == gameId)
-            .Select(g => g.Arts.FirstOrDefault(a => a.Id == g.CurrentRoundArtId))
-            .FirstOrDefaultAsync();
     }
 }
 

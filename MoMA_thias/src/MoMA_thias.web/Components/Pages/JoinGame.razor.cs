@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using MoMA_thias.web.Model;
 using MoMA_thias.web.Service;
 
 namespace MoMA_thias.web.Components.Pages;
@@ -6,6 +7,8 @@ namespace MoMA_thias.web.Components.Pages;
 public class JoinGameBase : ComponentBase
 {
     [Inject] private IGameService GameService { get; set; } = default!;
+    
+    private Game? Game { get; set; }
     
     protected string Code { get; set; } = string.Empty;
     protected string DisplayName { get; set; } = string.Empty;
@@ -17,8 +20,6 @@ public class JoinGameBase : ComponentBase
 
     protected decimal[] Guesses { get; } = new decimal[10];
     protected int Index { get; set; }
-    
-    private Guid GameId { get; set; } = Guid.Empty;
 
     protected string CurrentValueString
     {
@@ -52,8 +53,8 @@ public class JoinGameBase : ComponentBase
             return;
         }
 
-        GameId = await GameService.GetGameIdFromCodeAsync(Code);
-        if (GameId == Guid.Empty)
+        Game = await GameService.GetGameFromGameCode(Code);
+        if (Game is null)
         {
             StartError = "Game not found or not ready yet.";
             return;

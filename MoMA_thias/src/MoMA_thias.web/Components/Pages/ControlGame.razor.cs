@@ -7,6 +7,7 @@ namespace MoMA_thias.web.Components.Pages;
 public class ControlGameBase : ComponentBase
 {
     [Inject] protected IGameService GameService { get; set; } = default!;
+    private Game? Game { get; set; }
     protected IEnumerable<RankedBid> Leaderboard { get; private set; }= [];
     protected string Code { get; set; } = string.Empty;
     protected string? Error { get; set; }
@@ -19,13 +20,14 @@ public class ControlGameBase : ComponentBase
             Error = "Enter a game code.";
             return;
         }
-        var gameId = await GameService.GetGameIdFromCodeAsync(Code);
-        if (gameId == Guid.Empty)
+
+        Game = await GameService.GetGameFromGameCode(Code);
+        if (Game is null)
         {
             Error = "Game not found.";
             return;
         }
-        Leaderboard = await GameService.GetRankedPlayerBidsByGame(gameId);
+        Leaderboard = await GameService.GetRankedPlayerBidsByGame(Game.Id);
     }
 
     protected void Clear()

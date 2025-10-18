@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using MoMA_thias.web.Model;
 using MoMA_thias.web.Service;
 
 namespace MoMA_thias.web.Components.Pages;
@@ -9,13 +10,12 @@ public class CreateGameBase : ComponentBase
     
     [Inject] private IArtService ArtService { get; set; } = default!;
 
+    protected Game? Game { get; set; }
+
     protected decimal[] Prices { get; } = new decimal[10];
     protected int Index { get; set; } = 0;
     protected bool Created { get; set; } = false;
     protected string? ValidationError { get; set; }
-    
-    private Guid GameId { get; set; } = Guid.Empty;
-    protected string GameCode { get; set; } = string.Empty;
     protected string CurrentValueString
     {
         get => Prices[Index] == 0 ? string.Empty : Prices[Index].ToString("0.##");
@@ -44,8 +44,7 @@ public class CreateGameBase : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        GameCode = GameService.GenerateGameCode();
-        GameId = (await GameService.CreateGameAsync(string.Empty, string.Empty, GameCode)).Id;
+        Game = await GameService.CreateGameAsync(string.Empty, string.Empty);
     }
 
     protected void Prev()
@@ -73,7 +72,7 @@ public class CreateGameBase : ComponentBase
 
         for(int i = 0; i < Prices.Length; i++)
         {
-            await ArtService.CreateArtAsync(GameId, $"Art Piece {i + 1}", (double)Prices[i]);
+            await ArtService.CreateArtAsync(Game!.Id, $"Art Piece {i + 1}", (double)Prices[i]);
         }
         
         Created = true;
