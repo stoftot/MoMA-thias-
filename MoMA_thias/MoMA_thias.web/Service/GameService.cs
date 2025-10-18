@@ -1,4 +1,6 @@
+using MoMA_thias.web.Model;
 
+namespace MoMA_thias.web.Service;
 
 
 // Just a record to hold ranked bid information, mo time for result models :)
@@ -20,6 +22,10 @@ public interface IGameService
 
 public class GameService : IGameService
 {
+    public GameService()
+    {
+    }
+
     public Task ResetGame(Guid gameId)
     {
         return Task.CompletedTask;

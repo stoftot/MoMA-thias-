@@ -1,3 +1,5 @@
+namespace MoMA_thias.web.Model;
+
 public class Player
 {
     public Guid Id { get; set; }

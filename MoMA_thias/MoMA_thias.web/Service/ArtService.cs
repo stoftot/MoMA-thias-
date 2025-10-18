@@ -1,3 +1,7 @@
+using MoMA_thias.web.Model;
+
+namespace MoMA_thias.web.Service;
+
 public interface IArtService
 {
     Task<Art> CreateArtAsync(string name, double price);
