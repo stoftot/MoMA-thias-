@@ -22,8 +22,10 @@ public interface IGameService
 
     Task<IEnumerable<RankedBid>> GetRankedPlayerBidsByArt(Guid gameId, Guid artId);
 
-    Task<Game?> GetGameFromGameCode(string gameCode);
+    Task<Game?> GetGameFromGameCodeAsync(string gameCode);
     Task<Game?> GetGameFromIdAsync(Guid gameId);
+    
+    Task UpdateGameAsync(Game game);
 }
 
 public class GameService : IGameService
@@ -89,10 +91,11 @@ public class GameService : IGameService
         return Task.FromResult(game);
     }
     
-    public Task<Game?> GetGameFromGameCode(string gameCode)
+    public Task<Game?> GetGameFromGameCodeAsync(string gameCode)
     {
         return _db.Games
             .Where(g => g.GameCode == gameCode.Trim().ToUpperInvariant())
+            .Include(g => g.Arts)
             .FirstOrDefaultAsync();
     }
     
@@ -100,7 +103,14 @@ public class GameService : IGameService
     {
         return _db.Games
             .Where(g => g.Id == gameId)
+            .Include(g => g.Arts)
             .FirstOrDefaultAsync();
+    }
+
+    public Task UpdateGameAsync(Game game)
+    {
+        _db.Games.Update(game);
+        return _db.SaveChangesAsync();
     }
 
     private string GenerateGameCode()

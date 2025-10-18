@@ -53,7 +53,7 @@ public class JoinGameBase : ComponentBase
             return;
         }
 
-        Game = await GameService.GetGameFromGameCode(Code);
+        Game = await GameService.GetGameFromGameCodeAsync(Code);
         if (Game is null)
         {
             StartError = "Game not found or not ready yet.";
