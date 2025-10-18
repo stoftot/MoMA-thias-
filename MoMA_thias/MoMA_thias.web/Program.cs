@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MoMA_thias.web.Components;
+using MoMA_thias.web.Data;
 using MoMA_thias.web.Repository;
 using MoMA_thias.web.Service;
 

@@ -1,16 +1,19 @@
+using Microsoft.EntityFrameworkCore;
+using MoMA_thias.web.Data;
 using MoMA_thias.web.Model;
 
 namespace MoMA_thias.web.Service;
 
 
-// Just a record to hold ranked bid information, mo time for result models :)
+// Record to hold ranked bid information, no time for result models :)
 public record RankedBid(string PlayerName, string ArtName, double BidAmount, double Difference);
-
 
 
 public interface IGameService
 {
-    Task ResetGame(Guid gameId);
+    Task<Game> CreateGameAsync(string title, string adminPassword, string gameCode);
+    
+    Task ResetGameAsync(Guid gameId);
 
     Task<Bid> PlaceBidAsync(Guid gameId, Guid artId, Guid playerId, double amount);
 
@@ -22,27 +25,65 @@ public interface IGameService
 
 public class GameService : IGameService
 {
-    public GameService()
+    private readonly AppDbContext _db;
+
+    public GameService(AppDbContext db) => _db = db;
+
+ 
+    public async Task ResetGameAsync(Guid gameId)
     {
+        var bids = _db.Bids.Where(b => b.GameId == gameId);
+        _db.Bids.RemoveRange(bids);
+        await _db.SaveChangesAsync();
     }
 
-    public Task ResetGame(Guid gameId)
+    public async Task<Bid> PlaceBidAsync(Guid playerId, Guid gameId, Guid artId, double amount)
     {
-        return Task.CompletedTask;
+        var bid = new Bid { PlayerId = playerId, GameId = gameId, ArtId = artId, Amount = amount };
+        _db.Bids.Add(bid);
+        await _db.SaveChangesAsync();
+        return bid;
     }
 
-    public Task<Bid> PlaceBidAsync(Guid gameId, Guid artId, Guid playerId, double amount)
+    public async Task<IEnumerable<RankedBid>> GetRankedPlayerBidsByGame(Guid gameId)
     {
-        return Task.FromResult<Bid>(default!);
+        return await GetRankedPlayerBidsByArt(gameId, Guid.Empty);
     }
 
-    public Task<IEnumerable<RankedBid>> GetRankedPlayerBidsByGame(Guid gameId)
+    public async Task<IEnumerable<RankedBid>> GetRankedPlayerBidsByArt(Guid gameId, Guid artId)
     {
-        return Task.FromResult<IEnumerable<RankedBid>>(Array.Empty<RankedBid>());
+        // hent alt, vi skal bruge, og lav opslags-tabeller
+        var bids = artId == Guid.Empty
+            ? await _db.Bids.Where(b => b.GameId == gameId).ToListAsync()
+            : await _db.Bids.Where(b => b.GameId == gameId && b.ArtId == artId).ToListAsync();
+
+        var playerIds = bids.Select(b => b.PlayerId).Distinct().ToList();
+        var artIds = bids.Select(b => b.ArtId).Distinct().ToList();
+
+        var players = await _db.Players
+            .Where(p => playerIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => p.Name);
+
+        var arts = await _db.Arts
+            .Where(a => artIds.Contains(a.Id))
+            .ToDictionaryAsync(a => a.Id, a => new { a.Name, a.Price });
+
+        return bids
+            .Select(b => new RankedBid(
+                players[b.PlayerId],
+                arts[b.ArtId].Name,
+                b.Amount,
+                Math.Abs(b.Amount - arts[b.ArtId].Price)))
+            .OrderBy(x => x.Difference)
+            .ToList();
     }
 
-    public Task<IEnumerable<RankedBid>> GetRankedPlayerBidsByArt(Guid gameId, Guid artId)
+    public Task<Game> CreateGameAsync(string title, string adminPassword, string gameCode)
     {
-        return Task.FromResult<IEnumerable<RankedBid>>(Array.Empty<RankedBid>());
+        var game = new Game { Id = Guid.NewGuid(), Title = title, AdminPassword = adminPassword, GameCode = gameCode };
+        _db.Games.Add(game);
+        _db.SaveChangesAsync();
+        return Task.FromResult(game);
     }
 }
+

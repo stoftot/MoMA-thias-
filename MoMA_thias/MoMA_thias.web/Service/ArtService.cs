@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using MoMA_thias.web.Data;
 using MoMA_thias.web.Model;
 
 namespace MoMA_thias.web.Service;
@@ -7,4 +9,39 @@ public interface IArtService
     Task<Art> CreateArtAsync(string name, double price);
     Task<Art> UpdateArtAsync(Guid id, string name, double price);
     Task<Art> DeleteArtAsync(Guid id);
+}
+
+public class ArtService : IArtService
+{
+    private readonly AppDbContext _db;
+    public ArtService(AppDbContext db) => _db = db;
+
+    public async Task<Art> CreateArtAsync(string name, double price)
+    {
+        var a = new Art { Name = name, Price = price };
+        _db.Arts.Add(a);
+        await _db.SaveChangesAsync();
+        return a;
+    }
+
+    public async Task<Art> UpdateArtAsync(Guid gameId, Guid artId, string name, double price)
+    {
+        var a = await _db.Arts.FirstAsync(x => x.Id == artId && x.GameId == gameId);
+        a.Name = name; a.Price = price;
+        await _db.SaveChangesAsync();
+        return a;
+    }
+
+    public async Task<Art> DeleteArtAsync(Guid id)
+    {
+        var a = await _db.Arts.FindAsync(id) ?? throw new KeyNotFoundException("Art not found");
+        _db.Arts.Remove(a);
+        await _db.SaveChangesAsync();
+        return a;
+    }
+
+    public Task<Art> UpdateArtAsync(Guid id, string name, double price)
+    {
+        throw new NotImplementedException();
+    }
 }

@@ -2,7 +2,7 @@ namespace MoMA_thias.web.Model;
 
 public class Game
 {
-    public Guid Id { get; set; }
+    public required Guid Id { get; set; }
  
     public required string Title { get; set; }
 
