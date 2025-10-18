@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using MoMA_thias.web.Data;
 using MoMA_thias.web.Model;
@@ -21,6 +22,9 @@ public interface IGameService
 
     Task<IEnumerable<RankedBid>> GetRankedPlayerBidsByArt(Guid gameId, Guid artId);
 
+    Task<Guid> GetGameIdFromCodeAsync(string gameCode);
+    
+    string GenerateGameCode();
 }
 
 public class GameService : IGameService
@@ -84,6 +88,30 @@ public class GameService : IGameService
         _db.Games.Add(game);
         _db.SaveChangesAsync();
         return Task.FromResult(game);
+    }
+    
+    public Task<Guid> GetGameIdFromCodeAsync(string gameCode)
+    {
+        return _db.Games
+            .Where(g => g.GameCode.Equals(gameCode.Trim(), StringComparison.InvariantCultureIgnoreCase))
+            .Select(g => g.Id)
+            .FirstOrDefaultAsync();
+    }
+
+    public string GenerateGameCode()
+    {
+        const string chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+        Span<char> code = stackalloc char[6];
+
+        long ticks = DateTime.UtcNow.Ticks;
+        byte[] hash = SHA256.HashData(BitConverter.GetBytes(ticks));
+
+        for (int i = 0; i < 6; i++)
+        {
+            code[i] = chars[hash[i] % chars.Length];
+        }
+        
+        return new string(code);
     }
 }
 
