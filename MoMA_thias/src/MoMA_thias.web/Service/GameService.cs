@@ -6,29 +6,34 @@ using MoMA_thias.web.Model;
 namespace MoMA_thias.web.Service;
 
 
-// Record to hold ranked bid information, no time for result models :)
-public record RankedBid(string PlayerName, string ArtName, double BidAmount, double Difference);
+
+public sealed record RankedBid (
+    int Rank,
+    string PlayerName,
+    decimal TotalDifference,
+    int BidCount
+);
 
 
 public interface IGameService
 {
     Task<Game> CreateGameAsync(string title, string adminPassword);
-    
+
     Task ResetGameAsync(Guid gameId);
 
-    Task<Bid> PlaceBidAsync(string playerName, Guid gameId, Guid artId, double amount);
-    
+    Task<Bid> PlaceBidAsync(string playerName, Guid gameId, Guid artId, decimal amount);
+
     bool HavePlacedBidAsync(string playerName, Guid gameId, Guid artId);
-    
+
     Task<bool> IsNameTakenAsync(string playerName, Guid gameId);
-    
+
     Task<IEnumerable<RankedBid>> GetRankedPlayerBidsByGame(Guid gameId);
 
     Task<IEnumerable<RankedBid>> GetRankedPlayerBidsByArt(Guid gameId, Guid artId);
 
     Task<Game?> GetGameFromGameCodeAsync(string gameCode);
     Task<Game?> GetGameFromIdAsync(Guid gameId);
-    
+
     Task UpdateGameAsync(Game game);
 }
 
@@ -46,7 +51,7 @@ public class GameService : IGameService
         await _db.SaveChangesAsync();
     }
 
-    public async Task<Bid> PlaceBidAsync(string playerName, Guid gameId, Guid artId, double amount)
+    public async Task<Bid> PlaceBidAsync(string playerName, Guid gameId, Guid artId, decimal amount)
     {
         var bid = new Bid { PlayerName = playerName, GameId = gameId, ArtId = artId, Amount = amount };
         _db.Bids.Add(bid);
@@ -71,31 +76,53 @@ public class GameService : IGameService
 
     public async Task<IEnumerable<RankedBid>> GetRankedPlayerBidsByArt(Guid gameId, Guid artId)
     {
-        // hent alt, vi skal bruge, og lav opslags-tabeller
-        var bids = artId == Guid.Empty
-            ? await _db.Bids.Where(b => b.GameId == gameId).ToListAsync()
-            : await _db.Bids.Where(b => b.GameId == gameId && b.ArtId == artId).ToListAsync();
 
-        var playerNames = bids.Select(b => b.PlayerName).Distinct().ToList();
-        var artIds = bids.Select(b => b.ArtId).Distinct().ToList();
-
-        var players = await _db.Players
-            .Where(p => playerNames.Contains(p.Name))
-            .ToDictionaryAsync(p => p.Id, p => p.Name);
-
-        var arts = await _db.Arts
-            .Where(a => artIds.Contains(a.Id))
-            .ToDictionaryAsync(a => a.Id, a => new { a.Name, a.Price });
-
-        return bids
-            .Select(b => new RankedBid(
+        // Join and compute |Amount - Price| without Math.Abs (SQLite-friendly)
+        var baseQuery =
+            from b in _db.Bids.AsNoTracking()
+            join a in _db.Arts.AsNoTracking() on b.ArtId equals a.Id
+            where b.GameId == gameId //&& (artId == Guid.Empty || b.ArtId == artId)
+            let diff = (b.Amount >= a.Price) ? (b.Amount - a.Price) : (a.Price - b.Amount) // <-- no Math.Abs
+            select new
+            {
                 b.PlayerName,
-                arts[b.ArtId].Name,
-                b.Amount,
-                Math.Abs(b.Amount - arts[b.ArtId].Price)))
-            .OrderBy(x => x.Difference)
+                Diff = diff
+            };
+        
+
+
+        var bids = await baseQuery.ToListAsync();
+
+        // 3. Aggreger per spiller
+        var aggregated = bids
+            .GroupBy(x => x.PlayerName)
+            .Select(g => new
+            {
+                PlayerName = g.Key,
+                TotalDifference = g.Sum(v => v.Diff),
+                BidCount = g.Count()
+            })
+            .OrderBy(x => x.TotalDifference)
+            .ThenBy(x => x.PlayerName)
             .ToList();
+
+        // 4. Tilføj rank (dense rank: 1,1,2,3…)
+        var ranked = new List<RankedBid>(aggregated.Count);
+        decimal? prev = null;
+        int rank = 0;
+        foreach (var x in aggregated)
+        {
+            if (prev is null || x.TotalDifference != prev.Value)
+            {
+                rank = ranked.Count == 0 ? 1 : rank + 1;
+                prev = x.TotalDifference;
+            }
+            ranked.Add(new RankedBid(rank, x.PlayerName, x.TotalDifference, x.BidCount));
+        }
+
+    return ranked;
     }
+    
 
     public Task<Game> CreateGameAsync(string title, string adminPassword)
     {
@@ -105,28 +132,31 @@ public class GameService : IGameService
         return Task.FromResult(game);
     }
     
-    public Task<Game?> GetGameFromGameCodeAsync(string gameCode)
+    public async Task<Game?> GetGameFromGameCodeAsync(string gameCode)
     {
-        _db.Entry(_db.Games).Reload();
-        return _db.Games
-            .Where(g => g.GameCode == gameCode.Trim().ToUpperInvariant())
+        var game = await _db.Games
+            .AsNoTracking()
             .Include(g => g.Arts)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(g => g.GameCode == gameCode);   
+        return game; 
     }
     
-    public Task<Game?> GetGameFromIdAsync(Guid gameId)
+    public async Task<Game?> GetGameFromIdAsync(Guid gameId)
     {
-        _db.Entry(_db.Games).Reload();
-        return _db.Games
-            .Where(g => g.Id == gameId)
+        var game = await _db.Games
+            .AsNoTracking()
             .Include(g => g.Arts)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(g => g.Id == gameId);   
+        return game;
     }
 
-    public Task UpdateGameAsync(Game game)
+    public async Task UpdateGameAsync(Game gameModel)
     {
-        _db.Games.Update(game);
-        return _db.SaveChangesAsync();
+        var game = await _db.Games.FirstOrDefaultAsync(g => g.Id == gameModel.Id);
+        if (game is null) return;
+
+        game.CurrentRoundArtId = gameModel.CurrentRoundArtId;
+        await _db.SaveChangesAsync();    
     }
 
     private string GenerateGameCode()

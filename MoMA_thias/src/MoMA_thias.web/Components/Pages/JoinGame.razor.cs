@@ -59,31 +59,31 @@ public class JoinGameBase : ComponentBase
             return;
         }
         
-        if (await GameService.IsNameTakenAsync(DisplayName, Game.Id))
-        {
-            StartError = "Display name is already taken in this game.";
+        // if (await GameService.IsNameTakenAsync(DisplayName, Game.Id))
+        // {
+        //     StartError = "Display name is already taken in this game.";
             
-            return;
-        }
+        //     return;
+        // }
         
         if (Game.CurrentRoundArtId is not null)
             CurrentArt = await ArtService.GetArtAsync(Game.CurrentRoundArtId.Value);
         
         Started = true;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);   
     }
 
     protected async Task SubmitBid()
     {
-        await GameService.PlaceBidAsync(DisplayName, Game.Id, Game.CurrentRoundArtId.Value, (double)Guess);
+        await GameService.PlaceBidAsync(DisplayName, Game.Id, Game.CurrentRoundArtId.Value, Guess);
         Guess = 0;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);   
     }
 
     protected async Task Refresh()
     {
         Game = await GameService.GetGameFromIdAsync(Game.Id);
         CurrentArt = await ArtService.GetArtAsync(Game.CurrentRoundArtId.Value);
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);   
     }
 }

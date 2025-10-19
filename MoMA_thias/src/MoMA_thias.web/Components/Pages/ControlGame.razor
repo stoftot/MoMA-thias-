@@ -3,7 +3,7 @@
 @rendermode InteractiveServer
 
 <div class="container py-4">
-    <h2 class="mb-3">Control a Game</h2>
+    <h2 class="mb-3">Game Control Center</h2>
 
     @if (!GameLoaded)
     {
@@ -50,7 +50,7 @@
                 </div>
             </div>
 
-            @if (Leaderboard.Any())
+            @if (!Leaderboard.Any())
             {
                 <div class="text-muted">No players yet.</div>
             }
@@ -59,9 +59,10 @@
                 <table class="table table-striped align-middle">
                     <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Player</th>
-                        <th>Total Error</th>
+                        <th>Placering</th>
+                        <th>Spiller</th>
+                        <th>Antal bud</th>
+                        <th>Total afstand</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -72,7 +73,8 @@
                             <tr>
                                 <td>@rank</td>
                                 <td>@row.PlayerName</td>
-                                <td>@row.BidAmount</td>
+                                <td>@row.BidCount</td>
+                                <td>@row.TotalDifference</td>
                             </tr>
                             rank++;
                         }

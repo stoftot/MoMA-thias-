@@ -42,11 +42,6 @@ public class CreateGameBase : ComponentBase
     protected bool IsFirst => Index == 0;
     protected bool IsLast => Index == 9;
 
-    protected override async Task OnInitializedAsync()
-    {
-        Game = await GameService.CreateGameAsync(string.Empty, string.Empty);
-    }
-
     protected void Prev()
     {
         if (Index > 0) Index--;
@@ -70,12 +65,14 @@ public class CreateGameBase : ComponentBase
             return;
         }
 
+        Game = await GameService.CreateGameAsync(string.Empty, string.Empty);
+
         for(int i = 0; i < Prices.Length; i++)
         {
-            await ArtService.CreateArtAsync(Game!.Id, $"Art Piece {i + 1}", (double)Prices[i]);
+            await ArtService.CreateArtAsync(Game!.Id, $"Art Piece {i + 1}", Prices[i]);
         }
         
         Created = true;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);   
     }
 }

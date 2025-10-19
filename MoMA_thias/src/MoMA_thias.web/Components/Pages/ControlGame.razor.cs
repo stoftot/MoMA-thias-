@@ -66,19 +66,16 @@ public class ControlGameBase : ComponentBase
         SelectedArtId = artId;
         await GameService.UpdateGameAsync(Game);
         
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);   
     }
     
     protected async void RefreshLeaderboard()
     {
         if (Game is null) return;
 
-        // Re-fetch the game from the GameService by code to update guesses
-        var updated = await GameService.GetGameFromIdAsync(Game.Id);
-        if (updated is not null)
-            Game = updated;
+        Leaderboard = await GameService.GetRankedPlayerBidsByGame(Game.Id);
 
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);   
     }
 
     // Switchers invoked from the buttons

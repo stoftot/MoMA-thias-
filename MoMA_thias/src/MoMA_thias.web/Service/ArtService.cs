@@ -6,8 +6,8 @@ namespace MoMA_thias.web.Service;
 
 public interface IArtService
 {
-    Task<Art> CreateArtAsync(Guid gameId, string name, double price);
-    Task<Art> UpdateArtAsync(Guid id, string name, double price);
+    Task<Art> CreateArtAsync(Guid gameId, string name, decimal price);
+    Task<Art> UpdateArtAsync(Guid id, string name, decimal price);
     Task<Art> DeleteArtAsync(Guid id);
     Task<Art> GetArtAsync(Guid id);
 }
@@ -17,7 +17,7 @@ public class ArtService : IArtService
     private readonly AppDbContext _db;
     public ArtService(AppDbContext db) => _db = db;
 
-    public async Task<Art> CreateArtAsync(Guid gameId, string name, double price)
+    public async Task<Art> CreateArtAsync(Guid gameId, string name, decimal price)
     {
         var a = new Art { GameId = gameId, Name = name, Price = price };
         _db.Arts.Add(a);
@@ -25,7 +25,7 @@ public class ArtService : IArtService
         return a;
     }
 
-    public async Task<Art> UpdateArtAsync(Guid artId, string name, double price)
+    public async Task<Art> UpdateArtAsync(Guid artId, string name, decimal price)
     {
         var a = await _db.Arts.FirstAsync(x => x.Id == artId);
         a.Name = name; a.Price = price;
