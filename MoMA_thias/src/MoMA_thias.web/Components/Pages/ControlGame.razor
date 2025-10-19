@@ -1,0 +1,139 @@
+﻿@page "/control"
+@inherits ControlGameBase
+@rendermode InteractiveServer
+
+<div class="container py-4">
+    <h2 class="mb-3">Game Control Center</h2>
+
+    @if (!GameLoaded)
+    {
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label class="form-label">Game code</label>
+                <input class="form-control" @bind="Code" />
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button class="btn btn-primary me-2" @onclick="Load">Enter</button>
+                <button class="btn btn-outline-secondary" @onclick="Clear">Clear</button>
+            </div>
+        </div>
+        @if (Error is not null)
+        {
+            <div class="alert alert-danger">@Error</div>
+        }
+    }
+    else
+    {
+        @if (CurrentView == ControlView.Menu)
+        {
+            <div class="d-flex gap-3">
+                <button class="btn btn-primary" @onclick="() => CurrentView = ControlView.Leaderboard">
+                    Leaderboard
+                </button>
+                <button class="btn btn-secondary" @onclick="() => CurrentView = ControlView.ArtSelection">
+                    Select Art
+                </button>
+                <button class="btn btn-outline-danger ms-auto" @onclick="ResetToStart">Back (Change Code)</button>
+            </div>
+        }
+        else if (CurrentView == ControlView.Leaderboard)
+        {
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Leaderboard</h5>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary" @onclick="RefreshLeaderboard">
+                        Refresh
+                    </button>
+                    <button class="btn btn-outline-secondary" @onclick="() => CurrentView = ControlView.Menu">
+                        Back
+                    </button>
+                </div>
+            </div>
+
+            @if (!Leaderboard.Any())
+            {
+                <div class="text-muted">No players yet.</div>
+            }
+            else
+            {
+                <table class="table table-striped align-middle">
+                    <thead>
+                    <tr>
+                        <th>Placering</th>
+                        <th>Spiller</th>
+                        <th>Antal bud</th>
+                        <th>Total afstand</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @{
+                        var rank = 1;
+                        foreach (var row in Leaderboard)
+                        {
+                            <tr>
+                                <td>@rank</td>
+                                <td>@row.PlayerName</td>
+                                <td>@row.BidCount</td>
+                                <td>@row.TotalDifference</td>
+                            </tr>
+                            rank++;
+                        }
+                    }
+                    </tbody>
+                </table>
+            }
+        }
+        else if (CurrentView == ControlView.ArtSelection)
+        {
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Select Art</h5>
+                <button class="btn btn-outline-secondary" @onclick="() => CurrentView = ControlView.Menu">Back</button>
+            </div>
+
+            @if (Game is null)
+            {
+                <div class="text-muted">Loading art…</div>
+            }
+            else if (!AvailableArts.Any())
+            {
+                <div class="text-muted">No art found for this game.</div>
+            }
+            else
+            {
+                <ul class="list-group">
+                    @foreach (var art in AvailableArts)
+                    {
+                        var isSelected = SelectedArtId.HasValue && SelectedArtId.Value == art.Id;
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-3">
+                                <!-- Radio look without default selection -->
+                                <input class="form-check-input" type="radio"
+                                       name="artRadio"
+                                       checked="@isSelected"
+                                       @onchange="@(() => OnSelectArt(art.Id))" />
+                                <div>
+                                    <div class="fw-semibold">@art.Name</div>
+                                    <div class="text-muted">Price: @art.Price</div>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm @(isSelected ? "btn-success" : "btn-outline-primary")"
+                                    @onclick="() => OnSelectArt(art.Id)">
+                                @(isSelected ? "Selected" : "Select")
+                            </button>
+                        </li>
+                    }
+                </ul>
+                @if (SelectedArtId is null)
+                {
+                    <div class="mt-3 text-muted">No art selected.</div>
+                }
+                else
+                {
+                    <div class="mt-3 alert alert-info">
+                        Selected Art Id: <code>@SelectedArtId</code>
+                    </div>
+                }
+            }
+        }
+    }
+</div>
