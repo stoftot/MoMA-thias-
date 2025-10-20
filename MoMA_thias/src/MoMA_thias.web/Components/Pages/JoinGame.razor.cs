@@ -62,13 +62,6 @@ public class JoinGameBase : ComponentBase, IAsyncDisposable
             return;
         }
         
-        // if (await GameService.IsNameTakenAsync(DisplayName, Game.Id))
-        // {
-        //     StartError = "Display name is already taken in this game.";
-            
-        //     return;
-        // }
-        
         if (Game.CurrentRoundArtId is not null)
             CurrentArt = await ArtService.GetArtAsync(Game.CurrentRoundArtId.Value);
         

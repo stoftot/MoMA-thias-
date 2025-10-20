@@ -27,6 +27,7 @@ public class ControlGameBase : ComponentBase, IAsyncDisposable
     
     protected IEnumerable<Art> AvailableArts => Game?.Arts ?? [];
 
+     
     protected async Task Load()
     {
         Error = null;
@@ -44,6 +45,8 @@ public class ControlGameBase : ComponentBase, IAsyncDisposable
         }
 
         await SetupHubConnection();
+
+        await InvokeAsync(StateHasChanged);   
     }
 
     protected void Clear()
@@ -66,12 +69,14 @@ public class ControlGameBase : ComponentBase, IAsyncDisposable
         
         SelectedArtId = artId;
         await GameService.UpdateGameAsync(Game);
-        await hubConnection.SendAsync("SelectArt", Game.GameCode);
+
+
+        await hubConnection!.SendAsync("SelectArt", Game.GameCode);
         
         await InvokeAsync(StateHasChanged);   
     }
     
-    protected async void RefreshLeaderboard()
+    protected async Task RefreshLeaderboard()
     {
         if (Game is null) return;
 
@@ -82,11 +87,20 @@ public class ControlGameBase : ComponentBase, IAsyncDisposable
     
     private async Task SetupHubConnection()
     {
-        hubConnection= new HubConnectionBuilder()
+        hubConnection = new HubConnectionBuilder()
             .WithUrl(NavigationManager.ToAbsoluteUri("/controlhub"))
             .Build();
-        
+                   
+        hubConnection.On("SwitchArt", async () =>
+        {
+            // Bug: Virker kun hvis leaderboard maks er vist et sted 
+            if (CurrentView == ControlView.Leaderboard) 
+                await RefreshLeaderboard();
+        });
+
         await hubConnection.StartAsync();
+        
+        await hubConnection.SendAsync("JoinGame", Game!.GameCode);
     }
     
     public async ValueTask DisposeAsync()
