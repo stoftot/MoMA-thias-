@@ -1,14 +1,19 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.SignalR.Client;
 using MoMA_thias.web.Model;
 using MoMA_thias.web.Service;
 
 namespace MoMA_thias.web.Components.Pages;
 
-public class ControlGameBase : ComponentBase
+public class ControlGameBase : ComponentBase, IAsyncDisposable
 {
     protected enum ControlView { Menu, Leaderboard, ArtSelection }
     
     [Inject] protected IGameService GameService { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    
+    private HubConnection? hubConnection;
+    
     protected Game? Game { get; set; }
     protected IEnumerable<RankedBid> Leaderboard { get; private set; }= [];
     protected string Code { get; set; } = string.Empty;
@@ -37,7 +42,8 @@ public class ControlGameBase : ComponentBase
             Error = "Game not found.";
             return;
         }
-        Leaderboard = await GameService.GetRankedPlayerBidsByGame(Game.Id);
+
+        await SetupHubConnection();
     }
 
     protected void Clear()
@@ -54,17 +60,13 @@ public class ControlGameBase : ComponentBase
         CurrentView = ControlView.Menu;
     }
 
-    protected void EnsureArtLoaded()
-    {
-        if (Game is null) return;
-    }
-
     protected async void OnSelectArt(Guid artId)
     {
         if (Game is null) return;
         
         SelectedArtId = artId;
         await GameService.UpdateGameAsync(Game);
+        await hubConnection.SendAsync("SelectArt", Game.GameCode);
         
         await InvokeAsync(StateHasChanged);   
     }
@@ -77,16 +79,21 @@ public class ControlGameBase : ComponentBase
 
         await InvokeAsync(StateHasChanged);   
     }
-
-    // Switchers invoked from the buttons
-    protected void GoLeaderboard()
+    
+    private async Task SetupHubConnection()
     {
-        CurrentView = ControlView.Leaderboard;
+        hubConnection= new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/controlhub"))
+            .Build();
+        
+        await hubConnection.StartAsync();
     }
-
-    protected void GoArtSelection()
+    
+    public async ValueTask DisposeAsync()
     {
-        CurrentView = ControlView.ArtSelection;
-        EnsureArtLoaded();
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
     }
 }
