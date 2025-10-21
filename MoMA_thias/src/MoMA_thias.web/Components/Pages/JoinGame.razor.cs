@@ -1,14 +1,17 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.SignalR.Client;
 using MoMA_thias.web.Model;
 using MoMA_thias.web.Service;
 
 namespace MoMA_thias.web.Components.Pages;
 
-public class JoinGameBase : ComponentBase
+public class JoinGameBase : ComponentBase, IAsyncDisposable
 {
     [Inject] private IGameService GameService { get; set; } = default!;
-    
     [Inject] private IArtService ArtService { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    
+    private HubConnection? hubConnection;
     
     private Game? Game { get; set; }
     protected Art? CurrentArt { get; set; }
@@ -59,17 +62,14 @@ public class JoinGameBase : ComponentBase
             return;
         }
         
-        // if (await GameService.IsNameTakenAsync(DisplayName, Game.Id))
-        // {
-        //     StartError = "Display name is already taken in this game.";
-            
-        //     return;
-        // }
-        
         if (Game.CurrentRoundArtId is not null)
             CurrentArt = await ArtService.GetArtAsync(Game.CurrentRoundArtId.Value);
         
         Started = true;
+
+        await SetupHubConnection();
+        await hubConnection.SendAsync("JoinGame", Game.GameCode);
+        
         await InvokeAsync(StateHasChanged);   
     }
 
@@ -80,10 +80,32 @@ public class JoinGameBase : ComponentBase
         await InvokeAsync(StateHasChanged);   
     }
 
-    protected async Task Refresh()
+    private async Task Refresh()
     {
         Game = await GameService.GetGameFromIdAsync(Game.Id);
         CurrentArt = await ArtService.GetArtAsync(Game.CurrentRoundArtId.Value);
         await InvokeAsync(StateHasChanged);   
+    }
+    
+    private async Task SetupHubConnection()
+    {
+        hubConnection= new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/controlhub"))
+            .Build();
+
+        hubConnection.On("SwitchArt", () =>
+        {
+            Refresh();
+        });
+        
+        await hubConnection.StartAsync();
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
     }
 }
